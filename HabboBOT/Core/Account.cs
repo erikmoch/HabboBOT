@@ -1,14 +1,23 @@
-﻿namespace HabboBOT.Core
+﻿using System;
+
+namespace HabboBOT.Core
 {
     public class Account
     {
         public string Email { get; }
         public string Password { get; }
 
-        public Account(string email, string password)
+        public Account(string line)
         {
-            Email = email;
-            Password = password;
+            string[] split = line.Split(new char[] { ':', ':', ';', '-' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (split.Length != 2) return;
+
+            Email = split[0];
+            Password = split[1];
         }
+
+        public bool IsValid => Email != null && Password != null;
+
     }
 }

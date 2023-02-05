@@ -1,10 +1,8 @@
-﻿using System;
-using System.IO;
-using System.Collections.Generic;
-
-using HabboBOT.Core;
+﻿using HabboBOT.Core;
 using HabboBOT.Core.Services;
-
+using System;
+using System.Collections.Generic;
+using System.IO;
 using WebSocketSharp.Server;
 
 namespace HabboBOT
@@ -53,8 +51,9 @@ namespace HabboBOT
                 List<Account> accounts = new();
                 foreach (string line in File.ReadAllLines("accounts.txt"))
                 {
-                    if (line.Contains(':'))
-                        accounts.Add(new Account(line.Split(':')[0], line.Split(':')[1]));
+                    Account account = new Account(line);
+                    if (account.IsValid)
+                        accounts.Add(account);
                 }
                 return accounts;
             }
