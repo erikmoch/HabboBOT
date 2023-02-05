@@ -2,7 +2,7 @@
 
 namespace HabboBOT.Core
 {
-    public class AccountHandler
+    internal class AccountHandler
     {
         public  static List<Account> _accounts;
         private static Handler _handler;

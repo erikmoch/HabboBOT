@@ -1,19 +1,16 @@
 ﻿using System;
-using System.Linq;
-using System.Buffers;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 using Sulakore.Network;
 using Sulakore.Cryptography;
 using Sulakore.Network.Protocol;
 using Sulakore.Cryptography.Ciphers;
 
-using HabboBOT.Core.Messages;
+using Habot.Headers;
 
 namespace HabboBOT.Core
 {
-    public class Network
+    internal class Network
     {
         public bool IsConnected => _hnode.IsConnected;
         public int Id => _session.Id;
@@ -26,23 +23,23 @@ namespace HabboBOT.Core
         private HNode _hnode;
 
         public event EventHandler OnConnectionStarted;
-        public event EventHandler OnConnectionStopped;
+        public event EventHandler<string> OnConnectionStopped;
 
         public Network(Session session)
         {
             _session = session;
             _random = new Random();
-            _keyExchange = new HKeyExchange(65537, Globals.modulus);
+            _keyExchange = new HKeyExchange(65537, Config.PublicKey);
         }
 
-        public async void SendPacket(ushort id, params object[] values) => await _hnode.SendAsync(id, values);
+        public async void SendPacket(Outgoing id, params object[] values) => await _hnode.SendAsync((ushort)id, values);
 
         public async void Connect()
         {
             try
             {
                 _hexKey = GetRandomHexNumber();
-                _hnode = await HNode.ConnectAsync(Globals.Socket_Url, 30001);
+                _hnode = await HNode.ConnectAsync(Config.SocketUrl, 30001);
 
                 if (_hnode.IsConnected)
                 {
@@ -54,78 +51,75 @@ namespace HabboBOT.Core
 
                     if (_hnode.IsUpgraded)
                     {
-                        await _hnode.SendAsync(Header.GetOutgoingHeader("Hello"), _hexKey, "UNITY1", 0, 0);
-                        await _hnode.SendAsync(Header.GetOutgoingHeader("InitDhHandshake"));
+                        SendPacket(Outgoing.Hello, _hexKey, "UNITY1", 0, 0);
+                        SendPacket(Outgoing.InitDhHandshake);
 
-                        await HandlePacketAsync(await _hnode.ReceiveAsync());
+                        await ConnectionHandlerAsync(await _hnode.ReceiveAsync());
                     }
                     else
-                        Disconnected();
+                        OnConnectionStopped?.Invoke(this, "Unable to connect to websocket server.");
                 }
                 else
-                    Disconnected();
+                    OnConnectionStopped?.Invoke(this, "Unable to upgrade websocket as client.");
             }
-            catch
+            catch (Exception e)
             {
-                Disconnected();
+                OnConnectionStopped?.Invoke(this, e.Message);
             }
         }
 
-        private async Task HandlePacketAsync(HPacket packet)
+        private async Task ConnectionHandlerAsync(HPacket packet)
         {
             try
             {
-                if (packet.Id == Header.GetIncomingHeader("DhInitHandshake"))
-                    await VerifyPrimesAsync(packet.ReadUTF8(), packet.ReadUTF8());
-                else if (packet.Id == Header.GetIncomingHeader("DhCompleteHandshake"))
-                    await EncryptConnection(packet.ReadUTF8());
-                else if (packet.Id == Header.GetIncomingHeader("Ping"))
-                    await _hnode.SendAsync(Header.GetOutgoingHeader("Pong"));
-                else if (packet.Id == Header.GetIncomingHeader("Ok"))
-                    Connected();
+                switch (packet.Id)
+                {
+                    case (ushort)Incoming.DhInitHandshake:
+                        {
+                            string p = packet.ReadUTF8();
+                            string g = packet.ReadUTF8();
+                            _keyExchange.VerifyDHPrimes(p, g);
+                            _keyExchange.Padding = PKCSPadding.RandomByte;
+                            SendPacket(Outgoing.CompleteDhHandshake, _keyExchange.GetPublicKey());
+                            break;
+                        }
+                    case (ushort)Incoming.DhCompleteHandshake:
+                        {
+                            byte[] nonce = GetNonce(_hexKey);
+                            byte[] sharedKey = _keyExchange.GetSharedKey(packet.ReadUTF8());
+                            byte[] numArray = new byte[32];
+                            Buffer.BlockCopy(sharedKey, 0, numArray, 0, sharedKey.Length);
 
-                await HandlePacketAsync(await _hnode.ReceiveAsync());
+                            _hnode.Decrypter = new ChaCha20(numArray, nonce);
+                            _hnode.Encrypter = new ChaCha20(numArray, nonce);
+
+                            SendPacket(Outgoing.GetIdentityAgreementTypes);
+                            SendPacket(Outgoing.VersionCheck, 0, "0.17.0", "");
+                            SendPacket(Outgoing.UniqueMachineId, GetRandomHexNumber(76).ToLower(), "n/a", "Chrome 88", "n/a");
+                            SendPacket(Outgoing.LoginWithTicket, _session.SsoToken, 0);
+                            break;
+                        }
+                    case (ushort)Incoming.Ping:
+                        SendPacket(Outgoing.Pong);
+                        break;
+                    case (ushort)Incoming.Ok:
+                        OnConnectionStarted?.Invoke(this, null);
+                        break;
+                }
+
+                await ConnectionHandlerAsync(await _hnode.ReceiveAsync());
             }
-            catch
+            catch(Exception e)
             {
-                Disconnected();
+                OnConnectionStopped?.Invoke(this, e.Message);
             }
-        }
-
-        private async Task SendConnectionPackets()
-        {
-            await _hnode.SendAsync(Header.GetOutgoingHeader("GetIdentityAgreementTypes"));
-            await _hnode.SendAsync(Header.GetOutgoingHeader("VersionCheck"), 0, "0.17.0", "");
-            await _hnode.SendAsync(Header.GetOutgoingHeader("UniqueMachineId"), GetRandomHexNumber(76).ToLower(), "n/a", "Chrome 88", "n/a");
-            await _hnode.SendAsync(Header.GetOutgoingHeader("LoginWithTicket"), _session.SsoToken, 0);
-        }
-
-        private async Task EncryptConnection(string key)
-        {
-            byte[] nonce = GetNonce(_hexKey);
-            byte[] numArray = new byte[32];
-            byte[] sharedKey = _keyExchange.GetSharedKey(key);
-            Buffer.BlockCopy(sharedKey, 0, numArray, 0, sharedKey.Length);
-
-            _hnode.Decrypter = new ChaCha20(numArray, nonce);
-            _hnode.Encrypter = new ChaCha20(numArray, nonce);
-            await SendConnectionPackets();
-        }
-
-        private async Task VerifyPrimesAsync(string p, string g)
-        {
-            _keyExchange.VerifyDHPrimes(p, g);
-            _keyExchange.Padding = PKCSPadding.RandomByte;
-            await _hnode.SendAsync(Header.GetOutgoingHeader("CompleteDhHandshake"), _keyExchange.GetPublicKey());
         }
 
         private string GetRandomHexNumber(int digits = 24)
         {
             byte[] buffer = new byte[digits / 2];
             _random.NextBytes(buffer);
-            string str = string.Concat(((IEnumerable<byte>)buffer).Select(x => x.ToString("X2")).ToArray());
-
-            return digits % 2 == 0 ? str : str + _random.Next(16).ToString("X");
+            return BitConverter.ToString(buffer).Replace("-", "").Substring(0, digits);
         }
 
         private static byte[] GetNonce(string str)
@@ -135,8 +129,5 @@ namespace HabboBOT.Core
                 empty += str.Substring(index * 3, 2);
             return Convert.FromHexString(empty);
         }
-
-        private void Disconnected() => OnConnectionStopped?.Invoke(this, EventArgs.Empty);
-        private void Connected() => OnConnectionStarted?.Invoke(this, null);
     }
 }

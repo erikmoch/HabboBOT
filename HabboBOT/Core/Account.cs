@@ -2,7 +2,7 @@
 
 namespace HabboBOT.Core
 {
-    public class Account
+    internal class Account
     {
         public string Email { get; }
         public string Password { get; }
@@ -18,6 +18,5 @@ namespace HabboBOT.Core
         }
 
         public bool IsValid => Email != null && Password != null;
-
     }
 }

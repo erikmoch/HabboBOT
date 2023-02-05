@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace HabboBOT.Core
 {
-    public class Handler
+    internal class Handler
     {
         public List<Network> bots;
 
@@ -14,18 +14,18 @@ namespace HabboBOT.Core
 
         public void AppendBot(Network network)
         {
-            Writer.LogWarning($"[BOT {network.Id}] Connecting...");
+            LogWriter.LogWarning($"[BOT {network.Id}] Connecting...");
             network.OnConnectionStarted += (object sender, EventArgs e) =>
             {
                 bots.Add(network);
-                Writer.LogSuccess($"[BOT {network.Id}] Connected.");
+                LogWriter.LogSuccess($"[BOT {network.Id}] Connected.");
 
                 UpdateConsoleTitle();
             };
-            network.OnConnectionStopped += (object sender, EventArgs e) =>
+            network.OnConnectionStopped += (object sender, string e) =>
             {
                 bots.Remove(network);
-                Writer.LogError($"[BOT {network.Id}] Disconnected.");
+                LogWriter.LogError($"[BOT {network.Id}] Disconnected.");
 
                 UpdateConsoleTitle();
             };

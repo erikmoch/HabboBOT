@@ -1,9 +1,11 @@
-﻿using HabboBOT.Core;
-using HabboBOT.Core.Services;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
+using System.Collections.Generic;
+
 using WebSocketSharp.Server;
+
+using HabboBOT.Core;
+using HabboBOT.Core.Services;
 
 namespace HabboBOT
 {
@@ -17,17 +19,6 @@ namespace HabboBOT
         public void Run()
         {
             Console.Title = "HabboBOT - Connected[0]";
-
-            Config.SetGlobals(Config.Hotels.BR);
-
-            handler = new Handler();
-
-            _ = new AccountHandler(LoadAccounts(), handler);
-
-            server = new WebSocketServer(8080, false);
-            server.AddWebSocketService<TokenService>("/");
-            server.Start();
-
             string[] lines =
             {
                 @"  _   _       _     _           ____        _   ",
@@ -39,7 +30,17 @@ namespace HabboBOT
             foreach (string line in lines)
                 Console.WriteLine(line);
 
-            Writer.LogWarning("Waiting captcha token.\n");
+
+            handler = new Handler();
+            _ = new AccountHandler(LoadAccounts(), handler);
+
+            Config.Load();
+
+            server = new WebSocketServer(8080, false);
+            server.AddWebSocketService<TokenService>("/");
+            server.Start();
+
+            LogWriter.LogWarning("Waiting captcha token.\n");
 
             Console.ReadKey();
         }
@@ -59,12 +60,11 @@ namespace HabboBOT
             }
             else
             {
-                Writer.LogWarning("Account file doesn't exist.");
+                LogWriter.LogWarning("Account file doesn't exist.");
                 Console.ReadKey();
                 Environment.Exit(0);
-
-                return null;
             }
+            return null;
         }
     }
 }
