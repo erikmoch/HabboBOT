@@ -51,7 +51,7 @@ namespace HabboBOT.Core
 
                     if (_hnode.IsUpgraded)
                     {
-                        SendPacket(Outgoing.Hello, _hexKey, "UNITY1", 0, 0);
+                        SendPacket(Outgoing.Hello, _hexKey, "UNITY5", 4, 3);
                         SendPacket(Outgoing.InitDhHandshake);
 
                         await ConnectionHandlerAsync(await _hnode.ReceiveAsync());
@@ -78,8 +78,10 @@ namespace HabboBOT.Core
                         {
                             string p = packet.ReadUTF8();
                             string g = packet.ReadUTF8();
+
                             _keyExchange.VerifyDHPrimes(p, g);
                             _keyExchange.Padding = PKCSPadding.RandomByte;
+
                             SendPacket(Outgoing.CompleteDhHandshake, _keyExchange.GetPublicKey());
                             break;
                         }
@@ -95,7 +97,7 @@ namespace HabboBOT.Core
 
                             SendPacket(Outgoing.GetIdentityAgreementTypes);
                             SendPacket(Outgoing.VersionCheck, 0, "0.17.0", "");
-                            SendPacket(Outgoing.UniqueMachineId, GetRandomHexNumber(76).ToLower(), "n/a", "Chrome 88", "n/a");
+                            SendPacket(Outgoing.UniqueMachineId, GetRandomHexNumber(76).ToLower(), "n/a", "Chrome 110.0.0.0", "n/a");
                             SendPacket(Outgoing.LoginWithTicket, _session.SsoToken, 0);
                             break;
                         }

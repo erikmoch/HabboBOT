@@ -152,7 +152,7 @@ namespace Sulakore.Network
             const string requestHeaders = "Connection: Upgrade\r\n"
                                           + "Pragma: no-cache\r\n"
                                           + "Cache-Control: no-cache\r\n"
-                                          + "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.67 Safari/537.36 Edg/87.0.664.52\r\n"
+                                          + "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36\r\n"
                                           + "Upgrade: websocket\r\n"
                                           + "Origin: https://images.habbogroup.com\r\n"
                                           + "Sec-WebSocket-Version: 13\r\n"
