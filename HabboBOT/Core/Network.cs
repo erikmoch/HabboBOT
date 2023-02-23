@@ -96,7 +96,7 @@ namespace HabboBOT.Core
                             _hnode.Encrypter = new ChaCha20(numArray, nonce);
 
                             SendPacket(Outgoing.GetIdentityAgreementTypes);
-                            SendPacket(Outgoing.VersionCheck, 0, "0.17.0", "");
+                            SendPacket(Outgoing.VersionCheck, 0, Config.ClientVersion, "");
                             SendPacket(Outgoing.UniqueMachineId, GetRandomHexNumber(76).ToLower(), "n/a", "Chrome 110.0.0.0", "n/a");
                             SendPacket(Outgoing.LoginWithTicket, _session.SsoToken, 0);
                             break;

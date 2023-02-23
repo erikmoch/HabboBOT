@@ -8,12 +8,12 @@ namespace HabboBOT
     {
         public static string PublicKey { get; private set; }
         public static string SocketUrl { get; private set; }
+        public static string ClientVersion { get; private set; }
         public static string AuthenticationApi { get; private set; }
         public static string ClientUrlApi { get; private set; }
         public static string Host { get; private set; }
         public static string Origin { get; private set; }
         public static string Referer { get; private set; }
-        public static string Domain { get; private set; }
 
         public static void Load(string path = "Configuration.json")
         {
@@ -24,12 +24,12 @@ namespace HabboBOT
 
                 PublicKey = jsonData.PublicKey;
                 SocketUrl = jsonData.SocketUrl;
+                ClientVersion = jsonData.ClientVersion;
                 AuthenticationApi = jsonData.AuthenticationApi;
                 ClientUrlApi = jsonData.ClientUrlApi;
                 Host = jsonData.Host;
                 Origin = jsonData.Origin;
                 Referer = jsonData.Referer;
-                Domain = jsonData.Domain;
             }
             else
             {
@@ -44,7 +44,7 @@ namespace HabboBOT
         {
             try
             {
-                dynamic data = new { PublicKey = "", SocketUrl = "", AuthenticationApi = "", ClientUrlApi = "", Host = "", Origin = "", Referer = "", Domain = "" };
+                dynamic data = new { PublicKey = "", SocketUrl = "", ClientVersion = "", AuthenticationApi = "", ClientUrlApi = "", Host = "", Origin = "", Referer = "" };
                 string json = JsonConvert.SerializeObject(data, Formatting.Indented);
                 File.WriteAllText("Configuration.json", json);
             }
