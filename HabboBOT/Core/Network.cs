@@ -15,7 +15,8 @@ namespace HabboBOT.Core
         public bool IsConnected => _hnode.IsConnected;
         public int Id => _session.Id;
 
-        private string _hexKey;
+        private string _ivBytes;
+        private string _machineId;
 
         private readonly Random _random;
         private readonly Session _session;
@@ -38,7 +39,9 @@ namespace HabboBOT.Core
         {
             try
             {
-                _hexKey = GetRandomHexNumber();
+                _ivBytes = GetRandomHexNumber();
+                _machineId = GetRandomHexNumber(76).ToLower();
+
                 _hnode = await HNode.ConnectAsync(Config.SocketUrl, 30001);
 
                 if (_hnode.IsConnected)
@@ -51,7 +54,7 @@ namespace HabboBOT.Core
 
                     if (_hnode.IsUpgraded)
                     {
-                        SendPacket(Outgoing.Hello, _hexKey, "UNITY5", 4, 3);
+                        SendPacket(Outgoing.Hello, _ivBytes, "UNITY5", 4, 3);
                         SendPacket(Outgoing.InitDhHandshake);
 
                         await ConnectionHandlerAsync(await _hnode.ReceiveAsync());
@@ -87,7 +90,7 @@ namespace HabboBOT.Core
                         }
                     case (ushort)Incoming.DhCompleteHandshake:
                         {
-                            byte[] nonce = GetNonce(_hexKey);
+                            byte[] nonce = GetNonce(_ivBytes);
                             byte[] sharedKey = _keyExchange.GetSharedKey(packet.ReadUTF8());
                             byte[] numArray = new byte[32];
                             Buffer.BlockCopy(sharedKey, 0, numArray, 0, sharedKey.Length);
@@ -97,7 +100,7 @@ namespace HabboBOT.Core
 
                             SendPacket(Outgoing.GetIdentityAgreementTypes);
                             SendPacket(Outgoing.VersionCheck, 0, Config.ClientVersion, "");
-                            SendPacket(Outgoing.UniqueMachineId, GetRandomHexNumber(76).ToLower(), "n/a", "Chrome 110.0.0.0", "n/a");
+                            SendPacket(Outgoing.UniqueMachineId, _machineId, "n/a", "Chrome 110.0.0.0", "n/a");
                             SendPacket(Outgoing.LoginWithTicket, _session.SsoToken, 0);
                             break;
                         }
@@ -121,7 +124,7 @@ namespace HabboBOT.Core
         {
             byte[] buffer = new byte[digits / 2];
             _random.NextBytes(buffer);
-            return BitConverter.ToString(buffer).Replace("-", "").Substring(0, digits);
+            return BitConverter.ToString(buffer).Replace("-", "")[..digits];
         }
 
         private static byte[] GetNonce(string str)
