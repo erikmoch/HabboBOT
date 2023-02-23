@@ -1,6 +1,6 @@
 ﻿namespace Habot.Headers
 {
-    internal enum Outgoing
+    internal enum Outgoing : ushort
     {
         Hello = 4000,
         InitDhHandshake = 207,

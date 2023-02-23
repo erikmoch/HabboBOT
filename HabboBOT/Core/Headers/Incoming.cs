@@ -1,6 +1,6 @@
 ﻿namespace Habot.Headers
 {
-    internal enum Incoming
+    internal enum Incoming : ushort
     {
         DhInitHandshake = 278,
         DhCompleteHandshake = 279,
