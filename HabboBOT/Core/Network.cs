@@ -34,7 +34,6 @@ namespace HabboBOT.Core
         }
 
         public async void SendPacket(Outgoing id, params object[] values) => await _hnode.SendAsync((ushort)id, values);
-
         public async void Connect()
         {
             try
@@ -43,13 +42,10 @@ namespace HabboBOT.Core
                 _machineId = GetRandomHexNumber(76).ToLower();
 
                 _hnode = await HNode.ConnectAsync(Config.SocketUrl, 30001);
+                _hnode.IsWebSocket = true;
 
                 if (_hnode.IsConnected)
                 {
-                    _hnode.ReceiveFormat = HFormat.EvaWire;
-                    _hnode.SendFormat = HFormat.EvaWire;
-                    _hnode.IsWebSocket = true;
-
                     await _hnode.UpgradeWebSocketAsClientAsync();
 
                     if (_hnode.IsUpgraded)

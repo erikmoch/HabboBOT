@@ -45,22 +45,24 @@ namespace HabboBOT
             Console.ReadKey();
         }
 
-        private static List<Account> LoadAccounts()
+        private static Queue<Account> LoadAccounts()
         {
             if (File.Exists("accounts.txt"))
             {
-                List<Account> accounts = new();
+                List<Account> accounts = new List<Account>();
                 foreach (string line in File.ReadAllLines("accounts.txt"))
                 {
                     Account account = new Account(line);
                     if (account.IsValid)
                         accounts.Add(account);
                 }
-                return accounts;
+                return new Queue<Account>(accounts);
             }
             else
             {
-                LogWriter.LogWarning("Account file doesn't exist.");
+                LogWriter.LogWarning("Accounts file not found. Creating a new one.");
+                File.Create("accounts.txt");
+                LogWriter.LogSuccess("A new accounts file has been created. Please add your account information to the file for each account you wish to connect.");
                 Console.ReadKey();
                 Environment.Exit(0);
             }

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Text;
 using System.Net.Http;
 
@@ -6,18 +7,18 @@ namespace HabboBOT.Core
 {
     internal class Session
     {
-        public int Id { get; set; }
+        public int Id { get; }
+        private string CaptchaToken { get; }
         public string SsoToken { get; private set; }
 
-        private string CaptchaToken { get; set; }
-
         private readonly Account _account;
-        private readonly Handler _handler;
 
-        public Session(Account account, Handler handler, string captchaToken, int id)
+        public event EventHandler Authorized;
+        public event EventHandler<string> Unauthorized;
+
+        public Session(Account account, string captchaToken, int id)
         {
             _account = account;
-            _handler = handler;
 
             Id = id;
             CaptchaToken = captchaToken;
@@ -29,7 +30,7 @@ namespace HabboBOT.Core
             {
                 using (HttpClient client = new())
                 {
-                    client.DefaultRequestHeaders.Add("User-Agent", "");
+                    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36");
                     client.DefaultRequestHeaders.Add("Host", Config.Host);
                     client.DefaultRequestHeaders.Add("Origin", Config.Origin);
                     client.DefaultRequestHeaders.Add("Referer", Config.Referer);
@@ -42,10 +43,22 @@ namespace HabboBOT.Core
                         {
                             string content = await clientResponse.Content.ReadAsStringAsync();
                             SsoToken = content[0..^2].Split('/')[6];
-
-                            Network network = new(this);
-                            _handler.AppendBot(network);
+                            Authorized.Invoke(this, null);
                         }
+                    }
+                    else if (authenticationResponse.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        string content = await authenticationResponse.Content.ReadAsStringAsync();
+                        string errorMessage = string.Empty;
+
+                        if (content.Contains("invalid_password"))
+                            errorMessage = "Wrong password.";
+                        else if (content.Contains("user_banned"))
+                            errorMessage = "Banned account.";
+                        else if (content.Contains("invalid-captcha."))
+                            errorMessage = "Invalid captcha token.";
+
+                        Unauthorized.Invoke(this, errorMessage);
                     }
                 }
             }
